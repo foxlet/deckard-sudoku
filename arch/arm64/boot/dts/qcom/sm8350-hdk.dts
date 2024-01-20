@@ -387,6 +387,10 @@
 
 &mdss_dsi0 {
 	vdda-supply = <&vreg_l6b_1p2>;
+
+	qcom,dual-dsi-mode;
+	qcom,master-dsi;
+
 	status = "okay";
 
 	ports {
@@ -400,6 +404,30 @@
 };
 
 &mdss_dsi0_phy  {
+	vdds-supply = <&vreg_l5b_0p88>;
+	status = "okay";
+};
+
+&mdss_dsi1 {
+	vdda-supply = <&vreg_l6b_1p2>;
+	status = "okay";
+
+	qcom,dual-dsi-mode;
+
+	/* DSI1 is slave, so use DSI0 clocks */
+	assigned-clock-parents = <&mdss_dsi0_phy 0>, <&mdss_dsi0_phy 1>;
+
+	ports {
+		port@1 {
+			endpoint {
+				remote-endpoint = <&lt9611_b>;
+				data-lanes = <0 1 2 3>;
+			};
+		};
+	};
+};
+
+&mdss_dsi1_phy {
 	vdds-supply = <&vreg_l5b_0p88>;
 	status = "okay";
 };
@@ -465,6 +493,14 @@
 
 				lt9611_a: endpoint {
 					remote-endpoint = <&mdss_dsi0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+
+				lt9611_b: endpoint {
+					remote-endpoint = <&mdss_dsi1_out>;
 				};
 			};
 
