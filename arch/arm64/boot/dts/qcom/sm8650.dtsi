@@ -1588,7 +1588,7 @@
 					 &clk_virt SLAVE_QUP_CORE_1 QCOM_ICC_TAG_ALWAYS>;
 			interconnect-names = "qup-core";
 
-			iommus = <&apps_smmu 0xa3 0>;
+			iommus = <&apps_smmu 0xa3 0x3>;
 
 			dma-coherent;
 
