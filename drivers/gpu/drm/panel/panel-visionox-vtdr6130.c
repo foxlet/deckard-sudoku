@@ -9,6 +9,7 @@
 #include <linux/of.h>
 
 #include <drm/display/drm_dsc.h>
+#include <drm/display/drm_dsc_helper.h>
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_modes.h>
 #include <drm/drm_panel.h>
@@ -17,9 +18,12 @@
 
 struct visionox_vtdr6130 {
 	struct drm_panel panel;
+	struct drm_dsc_config dsc;
 	struct mipi_dsi_device *dsi;
 	struct gpio_desc *reset_gpio;
 	struct regulator_bulk_data supplies[3];
+	bool cmd_mode;
+	bool dsc_enable;
 };
 
 static inline struct visionox_vtdr6130 *to_visionox_vtdr6130(struct drm_panel *panel)
@@ -49,12 +53,20 @@ static int visionox_vtdr6130_on(struct visionox_vtdr6130 *ctx)
 	if (ret)
 		return ret;
 
+	if (ctx->dsc_enable)
+		mipi_dsi_dcs_write_seq(dsi, 0x03, 0x01);
+
 	mipi_dsi_dcs_write_seq(dsi, MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x20);
 	mipi_dsi_dcs_write_seq(dsi, MIPI_DCS_SET_DISPLAY_BRIGHTNESS, 0x00, 0x00);
 	mipi_dsi_dcs_write_seq(dsi, 0x59, 0x09);
 	mipi_dsi_dcs_write_seq(dsi, 0x6c, 0x01);
 	mipi_dsi_dcs_write_seq(dsi, 0x6d, 0x00);
-	mipi_dsi_dcs_write_seq(dsi, 0x6f, 0x01);
+
+	if (ctx->cmd_mode)
+		mipi_dsi_dcs_write_seq(dsi, 0x6f, 0x02);
+	else
+		mipi_dsi_dcs_write_seq(dsi, 0x6f, 0x01);
+
 	mipi_dsi_dcs_write_seq(dsi, 0x70,
 			       0x12, 0x00, 0x00, 0xab, 0x30, 0x80, 0x09, 0x60, 0x04,
 			       0x38, 0x00, 0x28, 0x02, 0x1c, 0x02, 0x1c, 0x02, 0x00,
@@ -205,6 +217,26 @@ static const struct drm_display_mode visionox_vtdr6130_mode = {
 	.height_mm = 157,
 };
 
+static int visionox_vtdr6130_enable(struct drm_panel *panel)
+{
+	struct visionox_vtdr6130 *ctx = to_visionox_vtdr6130(panel);
+	struct mipi_dsi_device *dsi = ctx->dsi;
+	struct drm_dsc_picture_parameter_set pps;
+	int ret;
+
+	if (!dsi->dsc)
+		return 0;
+
+	drm_dsc_pps_payload_pack(&pps, dsi->dsc);
+	ret = mipi_dsi_picture_parameter_set(dsi, &pps);
+	if (ret) {
+		dev_err(&dsi->dev, "Failed to set PPS\n");
+		return ret;
+	}
+
+	return 0;
+}
+
 static int visionox_vtdr6130_get_modes(struct drm_panel *panel,
 				       struct drm_connector *connector)
 {
@@ -228,6 +260,7 @@ static const struct drm_panel_funcs visionox_vtdr6130_panel_funcs = {
 	.prepare = visionox_vtdr6130_prepare,
 	.unprepare = visionox_vtdr6130_unprepare,
 	.get_modes = visionox_vtdr6130_get_modes,
+	.enable = visionox_vtdr6130_enable,
 };
 
 static int visionox_vtdr6130_bl_update_status(struct backlight_device *bl)
@@ -260,11 +293,32 @@ static int visionox_vtdr6130_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
 	struct visionox_vtdr6130 *ctx;
+	struct drm_dsc_config *dsc;
 	int ret;
 
 	ctx = devm_kzalloc(dev, sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return -ENOMEM;
+
+	ctx->cmd_mode = of_property_read_bool(dev->of_node, "enforce-cmd-mode");
+	ctx->dsc_enable = of_property_read_bool(dev->of_node, "enable-dsc");
+
+	/* Set DSC params */
+ctx->dsc_enable = 1;
+	if (ctx->dsc_enable) {
+		dsc = &ctx->dsc;
+		dsc->dsc_version_major = 0x1;
+		dsc->dsc_version_minor = 0x2;
+		dsc->slice_height = 40;
+		dsc->slice_width = 540;
+		dsc->slice_count = 2;
+		dsc->slice_per_pkt = 1;
+		dsc->bits_per_component = 8;
+		dsc->bits_per_pixel = 8 << 4;
+		dsc->block_pred_enable = true;
+
+		dsi->dsc = dsc;
+	}
 
 	ctx->supplies[0].supply = "vddio";
 	ctx->supplies[1].supply = "vci";
@@ -306,6 +360,9 @@ static int visionox_vtdr6130_probe(struct mipi_dsi_device *dsi)
 		return ret;
 	}
 
+	dev_err(&dsi->dev, "discovered with %s mode %s\n",
+		ctx->cmd_mode ? "cmd" : "video",
+		ctx->dsc_enable ? "and DSC enabled" : "");
 	return 0;
 }
 
