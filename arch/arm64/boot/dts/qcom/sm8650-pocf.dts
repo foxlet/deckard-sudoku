@@ -1899,6 +1899,10 @@
 	status = "okay";
 };
 
+&sleep_clk {
+	clock-frequency = <32000>;
+};
+
 #if 0
 &swr0 {
 	status = "okay";
@@ -2361,3 +2365,7 @@
     };
 };
 #endif
+
+&xo_board {
+	clock-frequency = <76800000>;
+};
