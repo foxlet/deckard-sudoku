@@ -36,7 +36,6 @@ static const char * const regulator_names[] = {
 // separately and not affect the panel on time sequencing
 static const char * const backlight_driver_names[] = {
 	"wled1",
-	"wled2",
 };
 
 typedef enum
