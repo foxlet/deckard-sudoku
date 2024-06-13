@@ -267,7 +267,7 @@
 			   <&pm8550_gpios 2 GPIO_ACTIVE_HIGH>;
 		bias-gpios = <&pm8550_gpios 4 GPIO_ACTIVE_HIGH>,
 			     <&pm8550_gpios 9 GPIO_ACTIVE_HIGH>;
-		i2c-adapter = <&i2c4 &i2c5>;
+		i2c-adapter = <&i2c4gpio &i2c5gpio>;
 	};
 
 	fpga_clk: fpga_clk {
@@ -304,6 +304,29 @@
 		regulator-always-on;
 	};
 
+	i2c4gpio: i2c4_gpio {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm 48 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm 49 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+
+		pinctrl-0 = <&i2c4_default>;
+		pinctrl-names = "default";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	i2c5gpio: i2c5_gpio {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm 52 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm 53 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+
+		pinctrl-0 = <&i2c5_default>;
+		pinctrl-names = "default";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
 };
 
 #if 0
@@ -842,6 +865,10 @@
 	status = "okay";
 };
 
+&gpi_dma1 {
+	status = "okay";
+};
+
 &mdss {
 	status = "okay";
 };
@@ -1052,9 +1079,12 @@
 	status = "okay";
 };
 
+
+#if 0
 &i2c4 {
 	status = "okay";
 
+#if 0
     /* FAN_I2C */
 	slg4ax46073v@8 {
 		compatible = "silego,slg4ax46073v";
@@ -1082,11 +1112,13 @@
 
 		status = "ok";
 	};
+#endif
 };
 
 &i2c5 {
 	status = "okay";
 };
+#endif
 
 // Master Hub required for Hub 7 and 8
 &i2c_master_hub_0 {
@@ -1755,6 +1787,21 @@
 			drive-strength = <2>; /* 2 MA */
 		};
 	};
+
+	i2c4_default: i2c4-default-state {
+		pins = "gpio48", "gpio49";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+
+	i2c5_default: i2c5-default-state {
+		pins = "gpio52", "gpio53";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+
 };
 
 &ufs_mem_hc {
