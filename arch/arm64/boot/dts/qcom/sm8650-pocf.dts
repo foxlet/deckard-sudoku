@@ -838,6 +838,10 @@
 	};
 };
 
+&dispcc {
+	status = "okay";
+};
+
 &mdss {
 	status = "okay";
 };
@@ -853,30 +857,6 @@
 	qcom,dual-dsi-mode;
 	qcom,master-dsi;
 
-#if 0
-	panel@0 {
-		compatible = "visionox,vtdr6130";
-		reg = <0>;
-
-		pinctrl-names = "default", "sleep";
-		pinctrl-0 = <&sde_dsi_active>, <&sde_te_active>;
-		pinctrl-1 = <&sde_dsi_suspend>, <&sde_te_suspend>;
-
-		vddio-supply = <&vreg_l12b_1p8>;
-		vci-supply = <&vreg_l13b_3p0>;
-		vdd-supply = <&vreg_l11b_1p2>;
-
-		reset-gpios = <&tlmm 133 GPIO_ACTIVE_LOW>;
-
-		port {
-			panel0_in: endpoint {
-				remote-endpoint = <&mdss_dsi0_out>;
-			};
-		};
-	};
-#endif
-
-#if 1
 
 	panel: panel@0 {
 		reg = <0>;
@@ -900,7 +880,6 @@
 			};
 		};
 #endif
-#if 1
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -918,9 +897,7 @@
 				};
 			};
 		};
-#endif
 	};
-#endif
 };
 
 &mdss_dsi0_out {
@@ -1817,7 +1794,6 @@
 &usb_1_dwc3_role_switch_in {
 	remote-endpoint = <&pm8550b_role_switch_out>;
 };
-#endif
 
 &usb_1_hsphy {
 	vdd-supply = <&vreg_l1i_0p88>;
@@ -1837,7 +1813,6 @@
 	status = "okay";
 };
 
-#if 0
 &usb_1_qmpphy_typec_mux_in {
 	remote-endpoint = <&pm8550b_typec_mux_out>;
 };
