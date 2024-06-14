@@ -411,6 +411,8 @@
 */
 
 &apps_rsc {
+	/delete-property/ power-domains;
+
 	regulators-0 {
 		compatible = "qcom,pm8550-rpmh-regulators";
 
@@ -861,6 +863,38 @@
 	};
 };
 
+&CPU0 {
+	/delete-property/ power-domains;
+};
+
+&CPU1 {
+	/delete-property/ power-domains;
+};
+
+&CPU2 {
+	/delete-property/ power-domains;
+};
+
+&CPU3 {
+	/delete-property/ power-domains;
+};
+
+&CPU4 {
+	/delete-property/ power-domains;
+};
+
+&CPU5 {
+	/delete-property/ power-domains;
+};
+
+&CPU6 {
+	/delete-property/ power-domains;
+};
+
+&CPU7 {
+	/delete-property/ power-domains;
+};
+
 &dispcc {
 	status = "okay";
 };
@@ -1073,6 +1107,18 @@
 
 &pmk8550_rtc {
 	allow-set-time;
+};
+
+&psci {
+	/delete-node/ power-domain-cpu0;
+	/delete-node/ power-domain-cpu1;
+	/delete-node/ power-domain-cpu2;
+	/delete-node/ power-domain-cpu3;
+	/delete-node/ power-domain-cpu4;
+	/delete-node/ power-domain-cpu5;
+	/delete-node/ power-domain-cpu6;
+	/delete-node/ power-domain-cpu7;
+	/delete-node/ power-domain-cluster;
 };
 
 &qupv3_id_1 {

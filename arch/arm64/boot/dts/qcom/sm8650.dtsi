@@ -73,10 +73,9 @@
 
 			clocks = <&cpufreq_hw 0>;
 
-/*
 			power-domains = <&CPU_PD0>;
 			power-domain-names = "psci";
-*/
+
 			enable-method = "psci";
 			next-level-cache = <&L2_0>;
 			capacity-dmips-mhz = <1024>;
@@ -107,10 +106,8 @@
 
 			clocks = <&cpufreq_hw 0>;
 
-/*
 			power-domains = <&CPU_PD1>;
 			power-domain-names = "psci";
-*/
 
 			enable-method = "psci";
 			next-level-cache = <&L2_0>;
@@ -129,10 +126,8 @@
 
 			clocks = <&cpufreq_hw 3>;
 
-/*
 			power-domains = <&CPU_PD2>;
 			power-domain-names = "psci";
-*/
 
 			enable-method = "psci";
 			next-level-cache = <&L2_200>;
@@ -158,10 +153,8 @@
 
 			clocks = <&cpufreq_hw 3>;
 
-/*
 			power-domains = <&CPU_PD3>;
 			power-domain-names = "psci";
-*/
 
 			enable-method = "psci";
 			next-level-cache = <&L2_200>;
@@ -180,10 +173,8 @@
 
 			clocks = <&cpufreq_hw 3>;
 
-/*
 			power-domains = <&CPU_PD4>;
 			power-domain-names = "psci";
-*/
 
 			enable-method = "psci";
 			next-level-cache = <&L2_400>;
@@ -209,10 +200,8 @@
 
 			clocks = <&cpufreq_hw 1>;
 
-/*
 			power-domains = <&CPU_PD5>;
 			power-domain-names = "psci";
-*/
 
 			enable-method = "psci";
 			next-level-cache = <&L2_500>;
@@ -237,10 +226,8 @@
 			reg = <0 0x600>;
 
 			clocks = <&cpufreq_hw 1>;
-/*
 
 			power-domains = <&CPU_PD6>;
-*/
 			power-domain-names = "psci";
 
 			enable-method = "psci";
@@ -266,10 +253,8 @@
 			reg = <0 0x700>;
 
 			clocks = <&cpufreq_hw 2>;
-/*
 
 			power-domains = <&CPU_PD7>;
-*/
 			power-domain-names = "psci";
 
 			enable-method = "psci";
@@ -409,11 +394,10 @@
 		interrupts = <GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
 	};
 
-	psci {
+	psci: psci {
 		compatible = "arm,psci-1.0";
 		method = "smc";
 
-#if 0
 		CPU_PD0: power-domain-cpu0 {
 			#power-domain-cells = <0>;
 			power-domains = <&CLUSTER_PD>;
@@ -467,7 +451,6 @@
 			domain-idle-states = <&CLUSTER_SLEEP_0>,
 					     <&CLUSTER_SLEEP_1>;
 		};
-#endif
 	};
 
 	reserved_memory: reserved-memory {
@@ -4758,9 +4741,7 @@
 				     <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>,
 				     <GIC_SPI 5 IRQ_TYPE_LEVEL_HIGH>;
 
-/*
 			power-domains = <&CLUSTER_PD>;
-*/
 
 			qcom,tcs-offset = <0xd00>;
 			qcom,drv-id = <2>;
