@@ -3441,6 +3441,10 @@
 						required-opps = <&rpmhpd_opp_nom>;
 					};
 
+					opp-690000000 {
+						opp-hz = /bits/ 64 <690000000>;
+						required-opps = <&rpmhpd_opp_turbo>;
+					};
 				};
 			};
 
