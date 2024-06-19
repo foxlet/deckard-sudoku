@@ -115,35 +115,6 @@
 		regulator-boot-on;
 	};
 
-	wlan_regulator: wlan-regulator {
-		compatible = "regulator-wlan";
-		regulator-name = "wlan";
-
-		enable-gpio = <&tlmm 16 GPIO_ACTIVE_HIGH>;
-
-		supply-count = <7>;
-
-		vin0-supply = <&vreg_s3c_0p9>; // VDD_PMU_AON_I / VDD095_PMU_BT / VDD09_PMU_RFA_I
-		vin1-supply = <&vreg_s4i_0p85>; // VDD095_PMU
-		vin2-supply = <&vreg_s2c_0p8>; // VDD095_MX_PMU
-		vin3-supply = <&vreg_s1c_1p2>; // VDD13_PMU_RFA_I / VDD13_PMU_PCIE_I
-		vin4-supply = <&vreg_s6c_1p8>; // VDD19_PMU_RFA_I / VDD19_PMU_PCIE_I
-		vin5-supply = <&vreg_l15b_1p8>; // VDD18_AON
-		vin6-supply = <&vreg_l3c_1p2>; // VDD12_18_IO
-		voltage-list = <916000 944000 976000 1316000 1864000 1800000 1200000>;
-		// l6k: 1800000
-		// s1c: 1316000
-		// s6c: 1864000
-		// s3c: 916000
-		// s2c: 976000
-		// s4i: 940000 (rounded to 944000 because of driver problem)
-		// l3c: 1200000
-		// l15b: 1800000
-
-		clocks = <&rpmhcc RPMH_RF_CLK1>;
-		clock-names = "TCXOI";
-	};
-
 #if 0
 	dummy_codec: dummy_codec {
 		compatible = "linux,snd-soc-dummy";
@@ -1010,8 +981,6 @@
 #endif
 
 &pcie0 {
-	vdda-supply = <&wlan_regulator>;
-
 	wake-gpios = <&tlmm 96 GPIO_ACTIVE_HIGH>;
 	perst-gpios = <&tlmm 94 GPIO_ACTIVE_LOW>;
 
@@ -1019,6 +988,28 @@
 	pinctrl-0 = <&pcie0_default_state>;
 
 	status = "okay";
+};
+
+&pcieport0 {
+	wifi@0 {
+		compatible = "pci17cb,1107";
+		reg = <0x10000 0x0 0x0 0x0 0x0>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&wlan_en>;
+
+		enable-gpios = <&tlmm 16 GPIO_ACTIVE_HIGH>;
+
+		vddio12-supply = <&vreg_l3c_1p2>;
+		vddio-supply = <&vreg_l15b_1p8>;
+		vdd-supply = <&vreg_s4i_0p85>;
+		vddaon-supply = <&vreg_s2c_0p8>;
+		vdddig-supply = <&vreg_s3c_0p9>;
+		vddrfa1-supply = <&vreg_s6c_1p8>;
+		vddrfa2-supply = <&vreg_s1c_1p2>;
+
+		clocks = <&rpmhcc RPMH_RF_CLK1>;
+	};
 };
 
 &pcie0_phy {
@@ -1848,6 +1839,12 @@
 		bias-pull-up;
 	};
 
+	wlan_en: wlan-en-state {
+		pins = "gpio16";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-pull-down;
+	};
 };
 
 &ufs_mem_hc {
