@@ -551,15 +551,27 @@ void dpu_encoder_helper_split_config(
 bool dpu_encoder_use_dsc_merge(struct drm_encoder *drm_enc)
 {
 	struct dpu_encoder_virt *dpu_enc = to_dpu_encoder_virt(drm_enc);
+	struct msm_drm_private *priv;
+	struct dpu_kms *dpu_kms;
+	struct dpu_global_state *global_state;
+	struct dpu_hw_blk *hw_dsc[MAX_CHANNELS_PER_ENC];
 	int i, intf_count = 0, num_dsc = 0;
 
 	for (i = 0; i < MAX_PHYS_ENCODERS_PER_VIRTUAL; i++)
 		if (dpu_enc->phys_encs[i])
 			intf_count++;
 
-	/* See dpu_encoder_get_topology, we only support 2:2:1 topology */
-	if (dpu_enc->dsc)
-		num_dsc = 2;
+	global_state = dpu_kms_get_existing_global_state(dpu_kms);
+	if (IS_ERR_OR_NULL(global_state)) {
+		DPU_ERROR("Failed to get global state");
+		return false;
+	}
+
+	priv = drm_enc->dev->dev_private;
+	dpu_kms = to_dpu_kms(priv->kms);
+	num_dsc = dpu_rm_get_assigned_resources(&dpu_kms->rm, global_state,
+						drm_enc->base.id, DPU_HW_BLK_DSC,
+						hw_dsc, ARRAY_SIZE(hw_dsc));
 
 	return (num_dsc > 0) && (num_dsc > intf_count);
 }
