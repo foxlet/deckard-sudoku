@@ -353,6 +353,8 @@ static int _dpu_rm_reserve_lms(struct dpu_rm *rm,
 
 		trace_dpu_rm_reserve_lms(lm_idx[i] + LM_0, enc_id,
 					 pp_idx[i] + PINGPONG_0);
+		printk("reserve lm[%d]:%d, pp_idx[%d]:%d, dspp[%d]:%d for enc_id %d\n",
+				i, lm_idx[i], i, pp_idx[i], i, dspp_idx[i], enc_id);
 	}
 
 	return 0;

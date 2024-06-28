@@ -620,6 +620,7 @@ static struct msm_display_topology dpu_encoder_get_topology(
 		 * this is power optimal and can drive up to (including) 4k
 		 * screens
 		 */
+		//topology.num_dsc = 2;
 		topology.num_dsc = 2;
 		topology.num_lm = 2;
 		topology.num_intf = 1;
