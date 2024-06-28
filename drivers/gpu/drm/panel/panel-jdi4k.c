@@ -43,9 +43,13 @@ typedef enum
 	RAD_MODE_120 = 0,
 	RAD_MODE_90,
 	RAD_MODE_80,
+	RAD_MODE_60,
 } rad_modes_t;
 
 #define PANEL_MFG_INFO_NUM_BYTES 40
+//#define NUM_PANELS         2
+#define NUM_PANELS         1
+#define DSC_EN
 
 struct rad {
 	struct device *dev;
@@ -62,11 +66,11 @@ struct rad {
 
 	struct backlight_device *backlight;
 
-	struct mipi_dsi_device *dsi[2];
+	struct mipi_dsi_device *dsi[NUM_PANELS];
 
 	bool prepared;
 	bool enabled;
-	u8 panel_mfg_info[PANEL_MFG_INFO_NUM_BYTES*2];
+	u8 panel_mfg_info[PANEL_MFG_INFO_NUM_BYTES*NUM_PANELS];
 	u8 panel_read_data[512];
 	int panel_read_id, panel_read_reg_addr, panel_read_num_bytes;
 	rad_modes_t current_mode;
@@ -88,20 +92,24 @@ static inline struct rad *panel_to_ctx(struct drm_panel *panel)
 #define V_FRONT_PORCH_120  404
 #define V_FRONT_PORCH_90   1265
 #define V_FRONT_PORCH_80   1270
+#define V_FRONT_PORCH_60_DSC   811
+#define V_FRONT_PORCH_60   150 /* to make dpu use 402MHz clk */
 #define V_BACK_PORCH       20
 #define V_SYNC             1
-#define NUM_PANELS         2
 
 // Brightness settings
 #define BRIGHTNESS_DEFAULT 256
 #define BRIGHTNESS_MAX_120 380
 #define BRIGHTNESS_MAX_90  508
 #define BRIGHTNESS_MAX_80  508
+#define BRIGHTNESS_MAX_60  508
 
 // DSI DCS command related
+#define PANEL_VFP_60  0x0560 /* val from dsi cmd */
 #define PANEL_VFP_80  1500
 #define PANEL_VFP_90  1500
 #define PANEL_VFP_120 700
+#define PANEL_VBP_60  0x01f4
 #define PANEL_VBP_80  800
 #define PANEL_VBP_90  800
 #define PANEL_VBP_120 800
@@ -112,9 +120,11 @@ static inline struct rad *panel_to_ctx(struct drm_panel *panel)
 
 // TODO adjust DPU overclocked settings for 90 Hz mode
 #ifdef DPUOVERCLOCKED
+	#define PANEL_VID_VS_DELAY_60  0x02de
 	#define PANEL_VID_VS_DELAY_80  400
 	#define PANEL_VID_VS_DELAY_90  500
 	#define PANEL_VID_VS_DELAY_120 400
+	#define PIXEL_CLOCK_KHZ_60     402000 /* maybe higher clk rate for non-DSC? */
 	#define PIXEL_CLOCK_KHZ_80     613000
 	#define PIXEL_CLOCK_KHZ_90     690000
 	#define PIXEL_CLOCK_KHZ_120    690000
@@ -130,7 +140,37 @@ static inline struct rad *panel_to_ctx(struct drm_panel *panel)
 // example: ( (2160 + 24 + 20 + 20) * ( 2160 + 1404 + 1 + 20))/( 717574000 ) = 0.011 sec = 90 Hz
 // The simplest way to create a new video mode is change vblank, which means changing V_FRONT_PORCH
 // 120 Hz: ( (2160 + 24 + 20 + 20) * ( 2160 + 401 + 1 + 40))/( 690000000 ) = 0.083 sec = 120 Hz
-static const struct drm_display_mode modes[3] = {
+static const struct drm_display_mode modes[] = {
+#ifdef DSC_EN
+	{
+		.name = "4320x2160_60",
+// 60 Hz: 402000000 / ( (2160 + 24 + 20 + 20) * ( 2160 + 811 + 1 + 40)) = 60 Hz
+		.clock = PIXEL_CLOCK_KHZ_60 * NUM_PANELS,
+		.hdisplay = H_PIXELS * NUM_PANELS,
+		/* double fporch/bporch/hsync per dts ??? */
+		.hsync_start = (H_PIXELS + H_FRONT_PORCH) * NUM_PANELS,
+		.hsync_end = (H_PIXELS + H_FRONT_PORCH + H_SYNC) * NUM_PANELS,
+		.htotal = (H_PIXELS + H_FRONT_PORCH + H_SYNC + H_BACK_PORCH) * NUM_PANELS,
+		.vdisplay = V_LINES,
+		.vsync_start = V_LINES + V_FRONT_PORCH_60_DSC,
+		.vsync_end = V_LINES + V_FRONT_PORCH_60_DSC + V_SYNC,
+		.vtotal = V_LINES + V_FRONT_PORCH_60_DSC + V_SYNC + V_BACK_PORCH,
+	},
+#else
+	{
+		.name = "2160x2160_60",
+		.clock = (2160 + 48 + 40 + 40) * (2160 + V_FRONT_PORCH_60 + 20 + 20) * 60 * NUM_PANELS / 1000,
+		.hdisplay = H_PIXELS * NUM_PANELS,
+		/* double fporch/bporch/hsync per dts ??? */
+		.hsync_start = (H_PIXELS + 48) * NUM_PANELS,
+		.hsync_end = (H_PIXELS + 48 + 40) * NUM_PANELS,
+		.htotal = (H_PIXELS + 48 + 40 + 40) * NUM_PANELS,
+		.vdisplay = V_LINES,
+		.vsync_start = V_LINES + V_FRONT_PORCH_60,
+		.vsync_end = V_LINES + V_FRONT_PORCH_60 + 20,
+		.vtotal = V_LINES + V_FRONT_PORCH_60 + 20 + 20,
+	},
+#endif
 	{
 		.name = "4320x2160_120",
 		.clock = PIXEL_CLOCK_KHZ_120 * NUM_PANELS,
@@ -169,10 +209,16 @@ static const struct drm_display_mode modes[3] = {
 	},
 };
 
-void _get_per_mode_settings(rad_modes_t mode, unsigned * panel_vfp, unsigned * vid_vs_delay, unsigned * vbp)
+void _get_per_mode_settings(rad_modes_t mode, unsigned * panel_vfp, unsigned * vid_vs_delay, unsigned * vbp, unsigned *rtn)
 {
 	switch(mode)
 	{
+		case RAD_MODE_60:
+			*panel_vfp = PANEL_VFP_60;
+			*vid_vs_delay = PANEL_VID_VS_DELAY_60;
+			*vbp = PANEL_VBP_60;
+			*rtn = 0x7A;
+		break;
 		case RAD_MODE_120:
 			*panel_vfp = PANEL_VFP_120;
 			*vid_vs_delay = PANEL_VID_VS_DELAY_120;
@@ -189,9 +235,10 @@ void _get_per_mode_settings(rad_modes_t mode, unsigned * panel_vfp, unsigned * v
 			*vbp = PANEL_VBP_80;
 		break;
 		default:
-			*panel_vfp = PANEL_VFP_120;
-			*vid_vs_delay = PANEL_VID_VS_DELAY_120;
-			*vbp = PANEL_VBP_120;
+			*panel_vfp = PANEL_VFP_60;
+			*vid_vs_delay = PANEL_VID_VS_DELAY_60;
+			*vbp = PANEL_VBP_60;
+			*rtn = 0x7A;
 		break;
 	}
 }
@@ -235,7 +282,6 @@ void _get_per_mode_settings(rad_modes_t mode, unsigned * panel_vfp, unsigned * v
 
 #define BE16(x) (x)>>8,(x)&0xff
 
-#if 1
 static int dsi_populate_dsc_params(struct drm_dsc_config *dsc)
 {
 	int ret;
@@ -255,7 +301,6 @@ static int dsi_populate_dsc_params(struct drm_dsc_config *dsc)
 
 	return drm_dsc_compute_rc_parameters(dsc);
 }
-#endif
 
 static void rad_init_dsc_config(struct rad *ctx)
 {
@@ -275,7 +320,7 @@ static void rad_init_dsc_config(struct rad *ctx)
 	dsi_populate_dsc_params(&ctx->dsc_cfg);
 }
 
-static void dsi_write_panel_on(struct drm_panel *panel)
+static void dsi_write_panel_on_dsc(struct drm_panel *panel)
 {
 	struct rad *ctx = panel_to_ctx(panel);
 
@@ -283,7 +328,7 @@ static void dsi_write_panel_on(struct drm_panel *panel)
 	unsigned RTN = 66, NL = 2160;
 	unsigned VFP, VBP, VID_VS_DELAY;
 	unsigned GPO1_TES1 = 233, GPO1_TEW1 = 17;
-    _get_per_mode_settings(ctx->current_mode, &VFP, &VID_VS_DELAY, &VBP);
+    _get_per_mode_settings(ctx->current_mode, &VFP, &VID_VS_DELAY, &VBP, &RTN);
 
 
 	pps_cmd[0] = 0xe6;
@@ -300,8 +345,10 @@ static void dsi_write_panel_on(struct drm_panel *panel)
 	DSI_CMD(0xb6, 0x20, 0x6b, 0x80, 0x06, 0x33, 0x8a, 0x00, 0x1a, 0x7a), //note the 0x7a last byte is needed to avoid corruption
 	// Display Mode: VRM=0b010, DM=1 (FIFO mode), TE_ON_VIDEO=1 (TE follows TE_MODE setting)
 	DSI_CMD(0xb7, 0x54, 0x00, 0x00, 0x00),
-	// Generic pin output setting: GPO1_TES1=233, GPO1_TEW1=17
-	// GPO2 is routed out TE, and is set to trigger 50 lines before, and last 50 lines longer, to trigger camera capture on the panel tester
+	/* Generic pin output setting: GPO1_TES1=233, GPO1_TEW1=17
+	 * GPO2 is routed out TE, and is set to trigger 50 lines before, and
+	 * last 50 lines longer, to trigger camera capture on the panel tester
+	 */
 	DSI_CMD(0xb9, BE16(GPO1_TES1), BE16(GPO1_TEW1), 0x00, 0x00, 0x00, 0x00, BE16(GPO1_TES1-CAMERA_TRIGGER_OFFSET), BE16(GPO1_TEW1+CAMERA_TRIGGER_OFFSET*2));
 	// Source Setting
 	DSI_CMD(0xf1,0x1e); // set offset for next write ( 0xc6 )
@@ -331,6 +378,71 @@ static void dsi_write_panel_on(struct drm_panel *panel)
 	DSI_CMD(MIPI_DCS_EXIT_SLEEP_MODE),
 	SLEEP(170),
 	DSI_CMD(MIPI_DCS_SET_DISPLAY_ON),
+	DSI_CMD(0xd6, 0x80), // load defaults after sleep out
+	SLEEP(200),
+	DSI_CMD(0xb0, 0x03),
+	SLEEP(200);
+}
+
+static void dsi_write_panel_on_60hz_no_dsc(struct drm_panel *panel)
+{
+	struct rad *ctx = panel_to_ctx(panel);
+
+	unsigned RTN = 66, NL = 2160;
+	unsigned VFP, VBP, VID_VS_DELAY;
+	unsigned GPO1_TES1 = 233, GPO1_TEW1 = 17;
+    _get_per_mode_settings(ctx->current_mode, &VFP, &VID_VS_DELAY, &VBP, &RTN);
+
+
+	// note:
+	// - changed VFP from 2013 to 221 (for 120Hz mode)
+	// - changed last byte of 0xb6 command to 0x70 (based on datasheet)
+	// - disabled broken 0xc6 command (has wrong parameters based on datasheet)
+
+	DSI_CMD(0xb0, 0x04), // mfg register unlock
+	DSI_CMD(0xd6, 0x00), // skip loading register defaults out of sleep
+	// DSI-2 Control Setting (C option): SELDL=2 (3 lane), PN2PTXR=1 (one port)
+	DSI_CMD(0xb6, 0x20, 0x6b, 0x80, 0x06, 0x33, 0x8a, 0x00, 0x1a, 0x7a), //note the 0x7a last byte is needed to avoid corruption
+	// Display Mode: VRM=0b010, DM=1 (FIFO mode), TE_ON_VIDEO=1 (TE follows TE_MODE setting)
+	DSI_CMD(0xb7, 0x54, 0x00, 0x00, 0x00),
+	/* Generic pin output setting: GPO1_TES1=233, GPO1_TEW1=17
+	 * GPO2 is routed out TE, and is set to trigger 50 lines before, and
+	 * last 50 lines longer, to trigger camera capture on the panel tester
+	 */
+	// 80/90/120Hz DSC
+	DSI_CMD(0xb9, BE16(GPO1_TES1), BE16(GPO1_TEW1), 0x00, 0x00, 0x00, 0x00, BE16(GPO1_TES1-CAMERA_TRIGGER_OFFSET), BE16(GPO1_TEW1+CAMERA_TRIGGER_OFFSET*2));
+// 60Hz dsi cmd:
+	//DSI_CMD(0xB9, 0, 0x24, 1, 0xBC);
+	// Display Timing
+//C0 7A 86 F4 01 08 70 05 60
+	//DSI_CMD(0xc0, RTN, 0x86, VBP&0xff, VBP>>8, BE16(NL), BE16(VFP)),
+	DSI_CMD(0xC0, 0x7A, 0x86, 0xF4, 1, 8, 0x70, 0x5a, 0x60);
+	// Source Setting
+	DSI_CMD(0xf1,0x1e); // set offset for next write ( 0xc6 )
+	//60Hz cmd
+	DSI_CMD(0xC6, 0x70, 0x08, 0x70, 0x08, 0x32, 0x6F, 0x08, 0x5A, 0, 0, 0, 0, 0, 0, 0, 0);
+//120Hz cmd:	DSI_CMD(0xc6,0x70,0x08,0xd0,0x02,0x21,0x6f,0x08,0x5a,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00); // video mode timings
+	// Scaling Mode Setting: RTSON=0
+	DSI_CMD(0xcd, 0x00),
+	// Compression Mode Setting: none
+	DSI_CMD(0xcf, 0x00, 0x00, 0x80, 0x46, 0x61, 0x00, 0x82),
+	// VID VS delay Setting: to shift when frame internal scanout starts 
+	//DSI_CMD(0xec, BE16(VID_VS_DELAY), 0x00, 0x00, 0x00),
+	DSI_CMD(0xec, 2, 0xde, 0x00, 0x00, 0x00),
+	
+	//TE and TE2 settings
+//	DSI_CMD(0xbe, 0x00, 0x6A, 0x02 ); //TE=GPIO2 0x6A, TE2=internal vsync 0x02
+
+	SLEEP(170),
+
+	DSI_CMD(0x03, 0);
+	DSI_CMD(0x44, 0, 0);
+	DSI_CMD(0x35, 0);
+	DSI_CMD(0x36, 0);
+	DSI_CMD(0x3A, 0x77);
+
+	DSI_CMD(MIPI_DCS_SET_DISPLAY_ON), // cmd: 29 00
+	DSI_CMD(MIPI_DCS_EXIT_SLEEP_MODE, 0), // 0x11
 	DSI_CMD(0xd6, 0x80), // load defaults after sleep out
 	SLEEP(200),
 	DSI_CMD(0xb0, 0x03),
@@ -570,10 +682,16 @@ static int set_brightness(struct rad *ctx, u16 brightness, u16 pulse_offset_rows
 	else if (ctx->current_mode == RAD_MODE_80 && GPO1_TEW1 > BRIGHTNESS_MAX_80 )
 	{
 		GPO1_TEW1 = BRIGHTNESS_MAX_80;
+	} else if (ctx->current_mode == RAD_MODE_60 && GPO1_TEW1 > BRIGHTNESS_MAX_60 )
+	{
+		GPO1_TEW1 = BRIGHTNESS_MAX_60;
 	}
 
+
 	ctx->dsi[0]->mode_flags &= ~MIPI_DSI_MODE_LPM;
+#if NUM_PANELS == 2
 	ctx->dsi[1]->mode_flags &= ~MIPI_DSI_MODE_LPM;
+#endif
 
 	if ( brightness != 0 )
 	{
@@ -584,7 +702,9 @@ static int set_brightness(struct rad *ctx, u16 brightness, u16 pulse_offset_rows
 	DSI_CMD(0xb9, BE16(GPO1_TES1), BE16(GPO1_TEW1), 0x00, 0x00, 0x00, 0x00, BE16(CAM_TRIGGER_START), BE16(CAM_TRIGGER_WIDTH));
 
 	ctx->dsi[0]->mode_flags |= MIPI_DSI_MODE_LPM;
+#if NUM_PANELS == 2
 	ctx->dsi[1]->mode_flags |= MIPI_DSI_MODE_LPM;
+#endif
 
 	return 0;
 }
@@ -664,7 +784,9 @@ static int rad_unprepare(struct drm_panel *panel)
 		return 0;
 
 	ctx->dsi[0]->mode_flags &= ~MIPI_DSI_MODE_LPM;
+#if NUM_PANELS == 2
 	ctx->dsi[1]->mode_flags &= ~MIPI_DSI_MODE_LPM;
+#endif
 
     // disable backlight drivers
 	ret = regulator_bulk_disable(ARRAY_SIZE(ctx->backlight_drivers), ctx->backlight_drivers);
@@ -699,11 +821,17 @@ static int rad_prepare(struct drm_panel *panel)
 	}
 
 	ctx->dsi[0]->mode_flags |= MIPI_DSI_MODE_LPM;
+#if NUM_PANELS == 2
 	ctx->dsi[1]->mode_flags |= MIPI_DSI_MODE_LPM;
+#endif
 
     // wait > 20 msec after power on before initial setting 
 	usleep_range(20000, 21000);
-	dsi_write_panel_on(panel);
+#ifdef DSC_EN
+	dsi_write_panel_on_dsc(panel);
+#else
+	dsi_write_panel_on_60hz_no_dsc(panel);
+#endif
 
     get_panel_info(panel);
 
@@ -755,42 +883,6 @@ static const struct backlight_ops rad_bl_ops = {
 };
 
 static struct drm_panel *_panel;
-
-int panel_mode_set(const struct drm_display_mode *mode)
-{
-	struct rad *ctx = panel_to_ctx(_panel);
-	unsigned RTN = 66, NL = 2160;
-	unsigned VFP, VBP, VID_VS_DELAY;
-	rad_modes_t new_mode;
-	// use the vtotal to determine the mode
-	if (mode->vtotal == modes[RAD_MODE_120].vtotal){
-		new_mode = RAD_MODE_120;
-	}else if (mode->vtotal == modes[RAD_MODE_90].vtotal){
-		new_mode = RAD_MODE_90;
-	}else if (mode->vtotal == modes[RAD_MODE_80].vtotal){
-		new_mode = RAD_MODE_80;
-	}else{
-		DRM_DEV_ERROR(ctx->dev, "Invalid vtotal in mode set %d", mode->vtotal);
-		return -EINVAL;
-	}
-
-    // check if we need to update settings
-	if (ctx->current_mode!=new_mode)
-	{
-		ctx->current_mode = new_mode;
-        // only reset the panel parematers if we already initialized the panels
-		if (ctx->prepared)
-		{
-			_get_per_mode_settings(ctx->current_mode, &VFP, &VID_VS_DELAY, &VBP);
-			// Display Timing
-			DSI_CMD(0xc0, RTN, 0x86, VBP&0xff, VBP>>8, BE16(NL), BE16(VFP));
-			// VID VS delay Setting: to shift when frame internal scanout starts
-			DSI_CMD(0xec, BE16(VID_VS_DELAY), 0x00, 0x00, 0x00);
-		}
-	}
-
-	return 0;
-}
 
 static int rad_enable(struct drm_panel *panel)
 {
@@ -907,7 +999,7 @@ static int rad_panel_add(struct rad *ctx)
 	bl_props.type = BACKLIGHT_RAW;
 	bl_props.brightness = BRIGHTNESS_DEFAULT;
 	// we set this based on 120 as the default mode as several scripts use it
-	bl_props.max_brightness = BRIGHTNESS_MAX_120;
+	bl_props.max_brightness = BRIGHTNESS_MAX_60;
 
 	ctx->backlight = devm_backlight_device_register(dev, dev_name(dev),
 							  dev, ctx->dsi[0], &rad_bl_ops,
@@ -949,6 +1041,7 @@ static int rad_probe(struct mipi_dsi_device *dsi)
 
 	ctx->panel.prepare_prev_first = true;
 
+#if NUM_PANELS == 2
 	dsi1 = of_graph_get_remote_node(dsi->dev.of_node, 1, -1);
 	if (!dsi1) {
 		DRM_DEV_ERROR(dev,
@@ -969,19 +1062,28 @@ static int rad_probe(struct mipi_dsi_device *dsi)
 		DRM_DEV_ERROR(dev, "failed to create dsi device\n");
 		return PTR_ERR(dsi1_device);
 	}
+#endif
 
 	mipi_dsi_set_drvdata(dsi, ctx);
 
 	ctx->dev = dev;
 	ctx->dsi[0] = dsi;
-	ctx->dsi[1] = dsi1_device;
+
+#ifdef DSC_EN
 	ctx->current_mode = RAD_MODE_120; // default to 120
 
 	rad_init_dsc_config(ctx);
 	ctx->dsi[0]->dsc = &ctx->dsc_cfg;
-	ctx->dsi[1]->dsc = &ctx->dsc_cfg;
 	ctx->dsi[0]->dsc_slice_per_pkt = 4;
+
+#if NUM_PANELS == 2
+	ctx->dsi[1] = dsi1_device;
+	ctx->dsi[1]->dsc = &ctx->dsc_cfg;
 	ctx->dsi[1]->dsc_slice_per_pkt = 4;
+#endif
+#else
+	ctx->current_mode = RAD_MODE_60;
+#endif
 
 	ret = rad_panel_add(ctx);
 	if (ret) {
@@ -1026,10 +1128,12 @@ static void rad_remove(struct mipi_dsi_device *dsi)
 
 	if (ctx->dsi[0])
 		mipi_dsi_detach(ctx->dsi[0]);
+#if NUM_PANELS == 2
 	if (ctx->dsi[1]) {
 		mipi_dsi_detach(ctx->dsi[1]);
 		mipi_dsi_device_unregister(ctx->dsi[1]);
 	}
+#endif
 
 	drm_panel_remove(&ctx->panel);
 
