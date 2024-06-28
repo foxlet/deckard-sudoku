@@ -886,8 +886,10 @@
 	vdda-supply = <&vreg_l3i_1p2>;
 	status = "okay";
 
+/*
 	qcom,dual-dsi-mode;
 	qcom,master-dsi;
+*/
 
 
 	panel: panel@0 {
@@ -905,13 +907,6 @@
 		//pinctrl-names = "default";
 		//pinctrl-0 = <&sde_dsi_active>;
 
-#if 0
-		port {
-			panel0_in: endpoint {
-				remote-endpoint = <&mdss_dsi0_out>;
-			};
-		};
-#endif
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -922,12 +917,14 @@
 				};
 			};
 
+/*
 			port@1 {
 				reg = <1>;
 				panel1_in: endpoint {
 					remote-endpoint = <&mdss_dsi1_out>;
 				};
 			};
+*/
 		};
 	};
 };
@@ -943,7 +940,7 @@
 	phy-type = <PHY_TYPE_CPHY>;
 };
 
-#if 1
+#if 0
 &mdss_dsi1 {
 	vdda-supply = <&vreg_l3i_1p2>;
 	status = "okay";
