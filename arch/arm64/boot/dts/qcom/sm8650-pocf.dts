@@ -882,6 +882,7 @@
 	status = "okay";
 };
 
+#if 0
 &mdss_dsi0 {
 	vdda-supply = <&vreg_l3i_1p2>;
 	status = "okay";
@@ -928,7 +929,9 @@
 		};
 	};
 };
+#endif
 
+/*
 &mdss_dsi0_out {
 	remote-endpoint = <&panel0_in>;
 	data-lanes = <0 1 2>;
@@ -939,16 +942,45 @@
 	status = "okay";
 	phy-type = <PHY_TYPE_CPHY>;
 };
+*/
 
-#if 0
+#if 1
 &mdss_dsi1 {
 	vdda-supply = <&vreg_l3i_1p2>;
 	status = "okay";
 
+#if 0
 	qcom,dual-dsi-mode;
 
 	assigned-clocks = <&dispcc DISP_CC_MDSS_BYTE1_CLK_SRC>, <&dispcc DISP_CC_MDSS_PCLK1_CLK_SRC>;
 	assigned-clock-parents = <&mdss_dsi0_phy 0>, <&mdss_dsi0_phy 1>;
+#endif
+	panel: panel@0 {
+		reg = <0>;
+		compatible = "jdi4k";
+
+		reset-gpios =<&pm8550_gpios 3 GPIO_ACTIVE_HIGH>;
+		reset2-gpios =<&pm8550_gpios 11 GPIO_ACTIVE_HIGH>;
+		enp-gpios = <&tlmm 32 GPIO_ACTIVE_HIGH>;
+		// XXX or tlmm 121 boost?
+
+		wled1-supply = <&backlight>;
+		vdda-supply = <&vreg_l12b_1p8>;
+
+		//pinctrl-names = "default";
+		//pinctrl-0 = <&sde_dsi_active>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@1 {
+				reg = <1>;
+				panel1_in: endpoint {
+					remote-endpoint = <&mdss_dsi1_out>;
+				};
+			};
+		};
+	};
 };
 
 &mdss_dsi1_out {
