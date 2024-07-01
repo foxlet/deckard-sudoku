@@ -70,6 +70,7 @@ struct rad {
 
 	bool prepared;
 	bool enabled;
+	u32 id;
 	u8 panel_mfg_info[PANEL_MFG_INFO_NUM_BYTES*NUM_PANELS];
 	u8 panel_read_data[512];
 	int panel_read_id, panel_read_reg_addr, panel_read_num_bytes;
@@ -713,6 +714,10 @@ static int truly_35597_power_on(struct rad *ctx)
 {
 	int ret;
 
+printk("=======power on panel %d\n", ctx->id);
+	if(ctx->id == 1)
+		return 0;
+
     // turn on vdd
 	ret = regulator_bulk_enable(ARRAY_SIZE(ctx->power_supplies), ctx->power_supplies);
 	if (ret < 0)
@@ -739,6 +744,10 @@ static int truly_35597_power_on(struct rad *ctx)
 static int rad_power_off(struct rad *ctx)
 {
 	int ret = 0;
+
+printk("=======power off panel %d\n");
+	if(ctx->id == 1)
+		return 0;
 
     // Put panels into reset
 	gpiod_set_value(ctx->reset_gpio, 0);
@@ -769,8 +778,12 @@ static int rad_disable(struct drm_panel *panel)
 	if (!ctx->enabled)
 		return 0;
 
+	if(ctx->id == 1)
+		goto disabled;
+
 	backlight_disable(ctx->backlight);
 
+disabled:
 	ctx->enabled = false;
 	return 0;
 }
@@ -789,10 +802,12 @@ static int rad_unprepare(struct drm_panel *panel)
 #endif
 
     // disable backlight drivers
-	ret = regulator_bulk_disable(ARRAY_SIZE(ctx->backlight_drivers), ctx->backlight_drivers);
-	if (ret) {
-		DRM_DEV_ERROR(ctx->dev,
-			"regulator_bulk_disable failed %d\n", ret);
+	if(ctx->id == 0) {
+		ret = regulator_bulk_disable(ARRAY_SIZE(ctx->backlight_drivers), ctx->backlight_drivers);
+		if (ret) {
+			DRM_DEV_ERROR(ctx->dev,
+				"regulator_bulk_disable failed %d\n", ret);
+		}
 	}
 
 	dsi_write_panel_off(panel);
@@ -810,6 +825,7 @@ static int rad_prepare(struct drm_panel *panel)
 	struct rad *ctx = panel_to_ctx(panel);
 	int ret;
 
+printk("========== preapring panel %d\n", ctx->id);
 	if (ctx->prepared)
 		return 0;
 
@@ -835,6 +851,9 @@ static int rad_prepare(struct drm_panel *panel)
 
     get_panel_info(panel);
 
+	if (ctx->id == 1)
+		goto prepared;
+
 	// turn on backlight drivers
 	ret = regulator_bulk_enable(ARRAY_SIZE(ctx->backlight_drivers), ctx->backlight_drivers);
 	if (ret < 0)
@@ -846,6 +865,7 @@ static int rad_prepare(struct drm_panel *panel)
 	ctx->backlight->props.pulse_offset_rows = 233;
 	set_brightness(ctx, ctx->backlight->props.brightness, ctx->backlight->props.pulse_offset_rows);
 
+prepared:
 	ctx->prepared = true;
 
 	return 0;
@@ -892,8 +912,12 @@ static int rad_enable(struct drm_panel *panel)
 	if (ctx->enabled)
 		return 0;
 
+	if (ctx->id == 1)
+		goto enabled;
+
 	ret = backlight_enable(ctx->backlight);
 
+enabled:
 	ctx->enabled = true;
 
 	return 0;
@@ -941,6 +965,10 @@ static int rad_panel_add(struct rad *ctx)
 	struct device *dev = ctx->dev;
 	struct backlight_properties bl_props;
 	int ret, i;
+
+printk("=======power off panel %d\n");
+	if(ctx->id == 1)
+		goto add_panel;
 
 	for (i = 0; i < ARRAY_SIZE(ctx->power_supplies); i++)
 		ctx->power_supplies[i].supply = regulator_names[i];
@@ -1010,6 +1038,7 @@ static int rad_panel_add(struct rad *ctx)
 		return ret;
 	}
 
+add_panel:
 	drm_panel_init(&ctx->panel, dev, &rad_drm_funcs,
 		       DRM_MODE_CONNECTOR_DSI);
 	drm_panel_add(&ctx->panel);
@@ -1064,6 +1093,8 @@ static int rad_probe(struct mipi_dsi_device *dsi)
 	}
 #endif
 
+	of_property_read_u32(dev->of_node, "id", &ctx->id);
+printk("========== find panel id %d\n", ctx->id);
 	mipi_dsi_set_drvdata(dsi, ctx);
 
 	ctx->dev = dev;
