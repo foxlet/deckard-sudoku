@@ -882,7 +882,6 @@
 	status = "okay";
 };
 
-#if 0
 &mdss_dsi0 {
 	vdda-supply = <&vreg_l3i_1p2>;
 	status = "okay";
@@ -893,9 +892,10 @@
 */
 
 
-	panel: panel@0 {
+	panel0: panel@0 {
 		reg = <0>;
 		compatible = "jdi4k";
+		id = <0>;
 
 		reset-gpios =<&pm8550_gpios 3 GPIO_ACTIVE_HIGH>;
 		reset2-gpios =<&pm8550_gpios 11 GPIO_ACTIVE_HIGH>;
@@ -929,9 +929,7 @@
 		};
 	};
 };
-#endif
 
-/*
 &mdss_dsi0_out {
 	remote-endpoint = <&panel0_in>;
 	data-lanes = <0 1 2>;
@@ -942,7 +940,6 @@
 	status = "okay";
 	phy-type = <PHY_TYPE_CPHY>;
 };
-*/
 
 #if 1
 &mdss_dsi1 {
@@ -955,17 +952,10 @@
 	assigned-clocks = <&dispcc DISP_CC_MDSS_BYTE1_CLK_SRC>, <&dispcc DISP_CC_MDSS_PCLK1_CLK_SRC>;
 	assigned-clock-parents = <&mdss_dsi0_phy 0>, <&mdss_dsi0_phy 1>;
 #endif
-	panel: panel@0 {
+	panel1: panel@1 {
 		reg = <0>;
 		compatible = "jdi4k";
-
-		reset-gpios =<&pm8550_gpios 3 GPIO_ACTIVE_HIGH>;
-		reset2-gpios =<&pm8550_gpios 11 GPIO_ACTIVE_HIGH>;
-		enp-gpios = <&tlmm 32 GPIO_ACTIVE_HIGH>;
-		// XXX or tlmm 121 boost?
-
-		wled1-supply = <&backlight>;
-		vdda-supply = <&vreg_l12b_1p8>;
+		id = <1>;
 
 		//pinctrl-names = "default";
 		//pinctrl-0 = <&sde_dsi_active>;
