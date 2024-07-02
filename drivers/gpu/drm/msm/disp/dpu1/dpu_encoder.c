@@ -632,8 +632,8 @@ static struct msm_display_topology dpu_encoder_get_topology(
 		 * this is power optimal and can drive up to (including) 4k
 		 * screens
 		 */
-		topology.num_dsc = 2;
-		topology.num_lm = 2;
+		topology.num_dsc = 1;
+		topology.num_lm = 1;
 		topology.num_intf = 1;
 	}
 
@@ -1162,6 +1162,7 @@ static void dpu_encoder_virt_atomic_mode_set(struct drm_encoder *drm_enc,
 	num_dsc = dpu_rm_get_assigned_resources(&dpu_kms->rm, global_state,
 						drm_enc->base.id, DPU_HW_BLK_DSC,
 						hw_dsc, ARRAY_SIZE(hw_dsc));
+printk("---------find %d dsc, set bit mask\n", num_dsc);
 	for (i = 0; i < num_dsc; i++) {
 		dpu_enc->hw_dsc[i] = to_dpu_hw_dsc(hw_dsc[i]);
 		dsc_mask |= BIT(dpu_enc->hw_dsc[i]->idx - DSC_0);
@@ -1928,7 +1929,8 @@ static void dpu_encoder_prep_dsc(struct dpu_encoder_virt *dpu_enc,
 	u32 initial_lines;
 	int i;
 
-	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++) {
+//	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++) {
+	for (i = 0; i < 1; i++) {
 		hw_pp[i] = dpu_enc->hw_pp[i];
 		hw_dsc[i] = dpu_enc->hw_dsc[i];
 
@@ -1941,7 +1943,7 @@ static void dpu_encoder_prep_dsc(struct dpu_encoder_virt *dpu_enc,
 	dsc_common_mode = 0;
 	pic_width = dsc->pic_width;
 
-	dsc_common_mode = DSC_MODE_SPLIT_PANEL;
+//	dsc_common_mode = DSC_MODE_SPLIT_PANEL;
 	if (dpu_encoder_use_dsc_merge(enc_master->parent))
 		dsc_common_mode |= DSC_MODE_MULTIPLEX;
 	if (enc_master->intf_mode == INTF_MODE_VIDEO)
@@ -1954,10 +1956,12 @@ static void dpu_encoder_prep_dsc(struct dpu_encoder_virt *dpu_enc,
 	 * dsc merge case: when using 2 encoders for the same stream,
 	 * no. of slices need to be same on both the encoders.
 	 */
-	enc_ip_w = intf_ip_w / 2;
+//	enc_ip_w = intf_ip_w / 2;
+	enc_ip_w = intf_ip_w;
 	initial_lines = dpu_encoder_dsc_initial_line_calc(dsc, enc_ip_w);
 
-	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++)
+//	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++)
+i = 0;
 		dpu_encoder_dsc_pipe_cfg(ctl, hw_dsc[i], hw_pp[i],
 					 dsc, dsc_common_mode, initial_lines);
 }
@@ -2108,7 +2112,8 @@ static void dpu_encoder_unprep_dsc(struct dpu_encoder_virt *dpu_enc)
 	struct dpu_hw_pingpong *hw_pp[MAX_CHANNELS_PER_ENC];
 	int i;
 
-	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++) {
+//	for (i = 0; i < MAX_CHANNELS_PER_ENC; i++) {
+	for (i = 0; i < 1; i++) {
 		hw_pp[i] = dpu_enc->hw_pp[i];
 		hw_dsc[i] = dpu_enc->hw_dsc[i];
 
