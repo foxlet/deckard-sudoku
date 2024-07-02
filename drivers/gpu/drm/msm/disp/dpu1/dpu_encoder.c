@@ -1932,8 +1932,10 @@ static void dpu_encoder_prep_dsc(struct dpu_encoder_virt *dpu_enc,
 	pic_width = dsc->pic_width;
 
 //	dsc_common_mode = DSC_MODE_SPLIT_PANEL;
+/* disable mux directly, as there is crash introduced in dpu_encoder_use_dsc_merge
 	if (dpu_encoder_use_dsc_merge(enc_master->parent))
 		dsc_common_mode |= DSC_MODE_MULTIPLEX;
+*/
 	if (enc_master->intf_mode == INTF_MODE_VIDEO)
 		dsc_common_mode |= DSC_MODE_VIDEO;
 
