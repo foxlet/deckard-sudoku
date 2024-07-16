@@ -1,6 +1,7 @@
 /dts-v1/;
 
 #include <dt-bindings/regulator/qcom,rpmh-regulator.h>
+#include <dt-bindings/phy/phy.h>
 #include "sm8650.dtsi"
 #include "pm8010.dtsi"
 #include "pm8550.dtsi"
@@ -132,6 +133,40 @@
 				regulator-name = "vreg_pmu_pcie_1p8";
 			};
 		};
+	};
+
+	backlight: backlight {
+		compatible = "mpq3367-backlight";
+		preboost-gpio = <&tlmm 41 GPIO_ACTIVE_HIGH>;
+		en-gpios = <&pm8550_gpios 1 GPIO_ACTIVE_HIGH>,
+			   <&pm8550_gpios 2 GPIO_ACTIVE_HIGH>;
+		bias-gpios = <&pm8550_gpios 4 GPIO_ACTIVE_HIGH>,
+			     <&pm8550_gpios 9 GPIO_ACTIVE_HIGH>;
+		i2c-adapter = <&i2c4gpio &i2c5gpio>;
+	};
+
+	i2c4gpio: i2c4_gpio {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm 48 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm 49 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+
+		pinctrl-0 = <&i2c4_default>;
+		pinctrl-names = "default";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	i2c5gpio: i2c5_gpio {
+		compatible = "i2c-gpio";
+		sda-gpios = <&tlmm 52 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&tlmm 53 (GPIO_ACTIVE_HIGH|GPIO_OPEN_DRAIN)>;
+
+		pinctrl-0 = <&i2c5_default>;
+		pinctrl-names = "default";
+
+		#address-cells = <1>;
+		#size-cells = <0>;
 	};
 };
 
@@ -591,7 +626,11 @@
 	};
 };
 
-&i2c5 {
+&dispcc {
+	status = "okay";
+};
+
+&gpi_dma1 {
 	status = "okay";
 };
 
@@ -608,6 +647,85 @@
 // Custom Connector I2C
 &i2c_hub_7 {
 	status = "okay";
+};
+
+&mdss {
+	status = "okay";
+};
+
+&mdss_mdp {
+	status = "okay";
+};
+
+&mdss_dsi0 {
+	vdda-supply = <&vreg_l3i_1p2>;
+	status = "okay";
+
+	qcom,dual-dsi-mode;
+	qcom,master-dsi;
+
+
+	panel: panel@0 {
+		reg = <0>;
+		compatible = "jdi4k";
+
+		reset-gpios =<&pm8550_gpios 3 GPIO_ACTIVE_HIGH>;
+		reset2-gpios =<&pm8550_gpios 11 GPIO_ACTIVE_HIGH>;
+		enp-gpios = <&tlmm 32 GPIO_ACTIVE_HIGH>;
+
+		wled1-supply = <&backlight>;
+		vdda-supply = <&vreg_l12b_1p8>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			port@0 {
+				reg = <0>;
+				panel0_in: endpoint {
+					remote-endpoint = <&mdss_dsi0_out>;
+				};
+			};
+
+			port@1 {
+				reg = <1>;
+				panel1_in: endpoint {
+					remote-endpoint = <&mdss_dsi1_out>;
+				};
+			};
+		};
+	};
+};
+
+&mdss_dsi0_out {
+	remote-endpoint = <&panel0_in>;
+	data-lanes = <0 1 2>;
+};
+
+&mdss_dsi0_phy {
+	vdds-supply = <&vreg_l1i_0p88>;
+	phy-type = <PHY_TYPE_CPHY>;
+	status = "okay";
+};
+
+&mdss_dsi1 {
+	vdda-supply = <&vreg_l3i_1p2>;
+	status = "okay";
+
+	qcom,dual-dsi-mode;
+
+	assigned-clocks = <&dispcc DISP_CC_MDSS_BYTE1_CLK_SRC>, <&dispcc DISP_CC_MDSS_PCLK1_CLK_SRC>;
+	assigned-clock-parents = <&mdss_dsi0_phy 0>, <&mdss_dsi0_phy 1>;
+};
+
+&mdss_dsi1_out {
+	remote-endpoint = <&panel1_in>;
+	data-lanes = <0 1 2>;
+};
+
+&mdss_dsi1_phy {
+	vdds-supply = <&vreg_l1i_0p88>;
+	status = "okay";
+	phy-type = <PHY_TYPE_CPHY>;
 };
 
 &pcie0 {
@@ -862,6 +980,20 @@
 			function = "gpio";
 			bias-pull-down;
 		};
+	};
+
+	i2c4_default: i2c4-default-state {
+		pins = "gpio48", "gpio49";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
+	};
+
+	i2c5_default: i2c5-default-state {
+		pins = "gpio52", "gpio53";
+		function = "gpio";
+		drive-strength = <2>;
+		bias-pull-up;
 	};
 
 	wlan_en: wlan-en-state {
