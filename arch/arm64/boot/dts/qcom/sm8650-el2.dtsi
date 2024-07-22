@@ -85,6 +85,14 @@
 	/delete-node/ smp2p-cdsp;
 	/delete-node/ smp2p-modem;
 
+	vdd_gfx: vdd-gfx {
+		compatible = "regulator-fixed-domain";
+		power-domains = <&rpmhpd RPMHPD_GFX>;
+		required-opps = <&rpmhpd_opp_turbo>; //903MHz
+		regulator-name = "GFX";
+		regulator-always-on;
+	};
+
 	soc@0 {
 		/delete-node/ timer@17420000;
 
@@ -339,10 +347,6 @@
 &spi13 {
 	/delete-property/ dmas;
 	/delete-property/ dma-names;
-};
-
-&gpu {
-	status = "disabled";
 };
 
 /* PON PBS reboot mode */
