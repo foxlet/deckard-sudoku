@@ -1230,6 +1230,8 @@ static struct qcom_icc_bcm bcm_mc0 = {
 
 static struct qcom_icc_bcm bcm_mm0 = {
 	.name = "MM0",
+	.keepalive = true,
+	.enable_mask = 913822,
 	.num_nodes = 1,
 	.nodes = { &qns_mem_noc_hf },
 };
