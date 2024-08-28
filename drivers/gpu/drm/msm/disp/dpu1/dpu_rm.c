@@ -778,6 +778,21 @@ void dpu_rm_release_all_sspp(struct dpu_global_state *global_state,
 		ARRAY_SIZE(global_state->sspp_to_crtc_id), crtc_id);
 }
 
+static char *dpu_hw_blk_type_name[] = {
+	[DPU_HW_BLK_TOP] = "blk_top",
+	[DPU_HW_BLK_SSPP] = "blk_sspp",
+	[DPU_HW_BLK_LM] = "blk_lm",
+	[DPU_HW_BLK_CTL] = "blk_ctl",
+	[DPU_HW_BLK_PINGPONG] = "blk_pingpong",
+	[DPU_HW_BLK_INTF] = "blk_intf",
+	[DPU_HW_BLK_WB] = "blk_wb",
+	[DPU_HW_BLK_DSPP] = "blk_dspp",
+	[DPU_HW_BLK_MERGE_3D] = "blk_merge_3d",
+	[DPU_HW_BLK_DSC] = "blk_dsc",
+	[DPU_HW_BLK_CDM] = "blk_cdm",
+	[DPU_HW_BLK_MAX] = "blk_none",
+};
+
 int dpu_rm_get_assigned_resources(struct dpu_rm *rm,
 	struct dpu_global_state *global_state, uint32_t enc_id,
 	enum dpu_hw_blk_type type, struct dpu_hw_blk **blks, int blks_size)
@@ -828,13 +843,13 @@ int dpu_rm_get_assigned_resources(struct dpu_rm *rm,
 			continue;
 
 		if (num_blks == blks_size) {
-			DPU_ERROR("More than %d resources assigned to enc %d\n",
-				  blks_size, enc_id);
+			DPU_ERROR("More than %d %s assigned to enc %d\n",
+				  blks_size, dpu_hw_blk_type_name[type], enc_id);
 			break;
 		}
 		if (!hw_blks[i]) {
-			DPU_ERROR("Allocated resource %d unavailable to assign to enc %d\n",
-				  type, enc_id);
+			DPU_ERROR("%s unavailable to assign to enc %d\n",
+				  dpu_hw_blk_type_name[type], enc_id);
 			break;
 		}
 		blks[num_blks++] = hw_blks[i];
