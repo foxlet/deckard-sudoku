@@ -1149,6 +1149,7 @@ static int dpu_plane_virtual_assign_resources(struct drm_crtc *crtc,
 
 		r_pipe->sspp = NULL;
 	} else {
+/*
 		if (dpu_plane_is_multirect_parallel_capable(pipe, pipe_cfg, fmt, max_linewidth) &&
 		    dpu_plane_is_multirect_parallel_capable(r_pipe, r_pipe_cfg, fmt, max_linewidth) &&
 		    (test_bit(DPU_SSPP_SMART_DMA_V1, &pipe->sspp->cap->features) ||
@@ -1161,6 +1162,7 @@ static int dpu_plane_virtual_assign_resources(struct drm_crtc *crtc,
 			r_pipe->multirect_index = DPU_SSPP_RECT_1;
 			r_pipe->multirect_mode = DPU_SSPP_MULTIRECT_PARALLEL;
 		} else {
+*/
 			/* multirect is not possible, use two SSPP blocks */
 			r_pipe->sspp = dpu_rm_reserve_sspp(&dpu_kms->rm, global_state, crtc, &reqs);
 			if (!r_pipe->sspp)
@@ -1171,7 +1173,7 @@ static int dpu_plane_virtual_assign_resources(struct drm_crtc *crtc,
 
 			r_pipe->multirect_index = DPU_SSPP_RECT_SOLO;
 			r_pipe->multirect_mode = DPU_SSPP_MULTIRECT_NONE;
-		}
+//		}
 	}
 
 	return dpu_plane_atomic_check_pipes(plane, state, crtc_state);
