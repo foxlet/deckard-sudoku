@@ -91,7 +91,7 @@ static inline struct lpm026m648c_ctx *panel_to_ctx(struct drm_panel *panel)
 	return container_of(panel, struct lpm026m648c_ctx, panel);
 }
 
-static const struct drm_display_mode modes[3] = {
+static const struct drm_display_mode modes[] = {
 	{
 		.name = "  2160x2160_120",
 		.clock = (2160 + 24 + 20 + 20) * (2160 + 404 + 1 + 20) * 120 / 1000,
@@ -132,6 +132,34 @@ static const struct drm_display_mode modes[3] = {
 		.vsync_start = 2160 + 1697,
 		.vsync_end = 2160 + 1697 + 1,
 		.vtotal = 2160 + 1697 + 1 + 20,
+		.width_mm = 50,
+		.height_mm = 50,
+	},
+	{
+		.name = "  2160x2160_60@690MHz",
+		.clock = (2160 + 24 + 20 + 20) * (2160 + 2989 + 1 + 20) * 60 / 1000,
+		.hdisplay = 2160,
+		.hsync_start = (2160 + 24),
+		.hsync_end = (2160 + 24 + 20),
+		.htotal = (2160 + 24 + 20 + 20),
+		.vdisplay = 2160,
+		.vsync_start = 2160 + 2989,
+		.vsync_end = 2160 + 2989 + 1,
+		.vtotal = 2160 + 2989 + 1 + 20,
+		.width_mm = 50,
+		.height_mm = 50,
+	},
+	{
+		.name = "  2160x2160_60@514MHz",
+		.clock = (2160 + 24 + 20 + 20) * (2160 + 1670 + 1 + 20) * 60 / 1000,
+		.hdisplay = 2160,
+		.hsync_start = (2160 + 24),
+		.hsync_end = (2160 + 24 + 20),
+		.htotal = (2160 + 24 + 20 + 20),
+		.vdisplay = 2160,
+		.vsync_start = 2160 + 1670,
+		.vsync_end = 2160 + 1670 + 1,
+		.vtotal = 2160 + 1670 + 1 + 20,
 		.width_mm = 50,
 		.height_mm = 50,
 	},
