@@ -238,6 +238,10 @@ static void dsi_write_panel_on(struct drm_panel *panel)
 	u8 pps_cmd[1 + sizeof(struct drm_dsc_picture_parameter_set)];
 
 	drm_dsc_pps_payload_pack((void *)&pps_cmd[1], &ctx->dsc_cfg);
+
+	print_hex_dump(KERN_INFO, "PPS:", DUMP_PREFIX_NONE, 16, 1, &pps_cmd[1],
+		       sizeof(struct drm_dsc_picture_parameter_set), false);
+
 	pps_cmd[0] = LPM02648C_PPS_SET;
 
 	lpm026m648c_dsi_write_seq(ctx, LPM02648C_MF_CMD_ACCESS_PROTECT, 0x04);
