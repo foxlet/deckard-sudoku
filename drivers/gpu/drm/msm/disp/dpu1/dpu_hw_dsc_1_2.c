@@ -99,6 +99,7 @@ static void dpu_hw_dsc_config_1_2(struct dpu_hw_dsc *hw_dsc,
 	if (!hw_dsc || !dsc)
 		return;
 
+	DRM_DEBUG_KMS("%s to DSC%d\n", __func__, hw_dsc->idx - DSC_0);
 	hw = &hw_dsc->hw;
 
 	sblk = hw_dsc->caps->sblk;
@@ -356,6 +357,13 @@ static void dpu_hw_dsc_bind_pingpong_blk_1_2(struct dpu_hw_dsc *hw_dsc,
 
 	if (pp)
 		mux_cfg = (pp - PINGPONG_0) & 0x7;
+
+	if (pp)
+		DRM_DEBUG_KMS("Binding dsc:%d to pp:%d\n",
+			      hw_dsc->idx - DSC_0, pp - PINGPONG_0);
+	else
+		DRM_DEBUG_KMS("Unbinding dsc:%d from any pp\n",
+			      hw_dsc->idx - DSC_0);
 
 	DPU_REG_WRITE(hw, sblk->ctl.base + DSC_CTL, mux_cfg);
 }

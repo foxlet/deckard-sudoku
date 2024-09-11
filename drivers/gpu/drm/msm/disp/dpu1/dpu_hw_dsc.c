@@ -53,6 +53,7 @@ static void dpu_hw_dsc_config(struct dpu_hw_dsc *hw_dsc,
 	u32 det_thresh_flatness;
 	bool is_cmd_mode = !(mode & DSC_MODE_VIDEO);
 
+	DRM_DEBUG_KMS("%s to DSC%d\n", __func__, hw_dsc->idx - PINGPONG_0);
 	DPU_REG_WRITE(c, DSC_COMMON_MODE, mode);
 
 	if (is_cmd_mode)
