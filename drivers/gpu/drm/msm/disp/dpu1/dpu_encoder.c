@@ -612,13 +612,12 @@ static struct msm_display_topology dpu_encoder_get_topology(
 	if (dsc) {
 		/*
 		 * In case of Display Stream Compression (DSC), we would use
-		 * 2 DSC encoders, 2 layer mixers and 1 interface
+		 * 2 DSC encoders, 2 layer mixers
 		 * this is power optimal and can drive up to (including) 4k
 		 * screens
 		 */
 		topology.num_dsc = 2;
 		topology.num_lm = 2;
-		topology.num_intf = 1;
 	}
 
 	return topology;
