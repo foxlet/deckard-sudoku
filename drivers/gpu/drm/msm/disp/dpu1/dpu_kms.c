@@ -957,6 +957,13 @@ static void dpu_kms_mdp_snapshot(struct msm_disp_state *disp_state, struct msm_k
 						    cat->pingpong[i].sblk->dither.name);
 	}
 
+	/* dump MERGE 3D sub-blocks HW regs info */
+	for (i = 0; i < cat->merge_3d_count; i++) {
+		base = dpu_kms->mmio + cat->merge_3d[i].base;
+		msm_disp_snapshot_add_block(disp_state, cat->merge_3d[i].len, base,
+				cat->merge_3d[i].name);
+	}
+
 	/* dump SSPP sub-blocks HW regs info */
 	for (i = 0; i < cat->sspp_count; i++) {
 		base = dpu_kms->mmio + cat->sspp[i].base;
