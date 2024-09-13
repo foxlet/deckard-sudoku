@@ -565,6 +565,8 @@ static unsigned long dsi_get_pclk_rate(const struct drm_display_mode *mode,
 	if (is_bonded_dsi)
 		pclk_rate /= 2;
 
+	DRM_DEBUG_KMS("%s: %lu\n", __func__, pclk_rate);
+
 	return pclk_rate;
 }
 
